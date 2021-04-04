@@ -14,7 +14,7 @@ const app = express();
 const server = http.createServer(app);
 const io = socketio(server, {
   cors: {
-    origin: "http://localhost:3000",
+    origin: "https://kanban-fire-app.web.app",
     methods: ["GET", "POST"],
     allowedHeaders: ["my-custom-header"],
     credentials: true,
@@ -31,6 +31,22 @@ io.on("connect", (socket) => {
 
     socket.join(user.room);
     
+    
+    socket.emit("message", {
+      user: "admin",
+      text: `${user.name}, welcome to room ${user.room}.`,
+      type: "text",
+    });
+    socket.broadcast.to(user.room).emit("message", {
+      user: "admin",
+      text: `${user.name} has joined!`,
+      type: "text",
+    });
+
+    io.to(user.room).emit("roomData", {
+      room: user.room,
+      users: getUsersInRoom(user.room),
+    });
     var createMessageDB = {
       message: "User joined",
       name: "admin",
@@ -51,18 +67,6 @@ io.on("connect", (socket) => {
     try {
       await message.insertMany(createMessageDB);
     } catch (error) {}
-    socket.emit("message", {
-      user: "admin",
-      text: `${user.name}, welcome to room ${user.room}.`,
-      type: "text",
-    });
-    socket.broadcast.to(user.room).emit("message", {
-      user: "admin",
-      text: `${user.name} has joined!`,
-      type: "text",
-    });
-
-    
     var createMessageDB = {
       message: "User joined",
       name: "admin",
@@ -73,10 +77,6 @@ io.on("connect", (socket) => {
     try {
       await message.insertMany(createMessageDB);
     } catch (error) {}
-    io.to(user.room).emit("roomData", {
-      room: user.room,
-      users: getUsersInRoom(user.room),
-    });
     
     callback();
   });
@@ -85,6 +85,12 @@ io.on("connect", (socket) => {
     filter = new Filter();
     const user = getUser(socket.id);
     if (user.room) {
+      
+      io.to(user.room).emit("message", {
+        user: user.name,
+        text: filter.clean(message),
+        type: "text",
+      });
       var createMessageDB = {
         message: filter.clean(message),
         name: user.name,
@@ -95,12 +101,6 @@ io.on("connect", (socket) => {
       try {
         await message.insertMany(createMessageDB);
       } catch (error) {}
-      io.to(user.room).emit("message", {
-        user: user.name,
-        text: filter.clean(message),
-        type: "text",
-      });
-      
       callback();
     } else {
       callback("No such user room present");
@@ -110,6 +110,12 @@ io.on("connect", (socket) => {
   socket.on("sendLocation", async (location, callback) => {
     const user = getUser(socket.id);
     if (user) {
+      
+      io.to(user.room).emit("message", {
+        user: user.name,
+        text: location,
+        type: "location",
+      });
       var createMessageDB = {
         message: location,
         name: user.name,
@@ -120,12 +126,6 @@ io.on("connect", (socket) => {
       try {
         await message.insertMany(createMessageDB);
       } catch (error) {}
-      io.to(user.room).emit("message", {
-        user: user.name,
-        text: location,
-        type: "location",
-      });
-      
       callback();
     } else {
       callback("No such user room present");
@@ -136,16 +136,6 @@ io.on("connect", (socket) => {
     const user = removeUser(socket.id);
 
     if (user) {
-      var createMessageDB = {
-        message: "User left",
-        name: "admin",
-        eventtype: "message",
-        roomname: user.room,
-        otherdetails: "User left " + user.name,
-      };
-      try {
-        await message.insertMany(createMessageDB);
-      } catch (error) {}
       
       io.to(user.room).emit("message", {
         user: "admin",
@@ -157,6 +147,17 @@ io.on("connect", (socket) => {
         room: user.room,
         users: getUsersInRoom(user.room),
       });
+      var createMessageDB = {
+        message: "User left",
+        name: "admin",
+        eventtype: "message",
+        roomname: user.room,
+        otherdetails: "User left " + user.name,
+      };
+      try {
+        await message.insertMany(createMessageDB);
+      } catch (error) {}
+      
     }
   });
 });
