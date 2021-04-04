@@ -10,7 +10,8 @@ import './Chat.css';
 import { useHistory } from 'react-router-dom';
 import SnackBar from "../Snackbar/Snackbar";
 
-const ENDPOINT = process.env.REACT_APP_SOCKET_ENDPOINT;
+// const ENDPOINT = process.env.REACT_APP_SOCKET_ENDPOINT;
+const ENDPOINT = "https://uploader-backend-rushesh.herokuapp.com"
 
 let socket;
 
@@ -36,6 +37,7 @@ const Chat = ({ location }) => {
       history.push("/");
     }
     else{
+
       socket = io(ENDPOINT, {
       withCredentials: true,
       extraHeaders: {
